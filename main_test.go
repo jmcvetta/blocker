@@ -63,7 +63,7 @@ func (s *TestSuite) write(c *C) (key string, value []byte, statusCode int) {
 	_, err = rand.Read(value)
 	c.Assert(err, IsNil)
 	// We're not doing anything server-side with the bodyType
-	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(value))
+	resp, err := http.Post(s.url, "", bytes.NewBuffer(value))
 	defer resp.Body.Close()
 	c.Assert(err, IsNil)
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
@@ -121,7 +121,7 @@ func (s *TestSuite) TestConcurrentSameData(c *C) {
 	_, err = rand.Read(value)
 	c.Assert(err, IsNil)
 	writer := func() {
-		resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(value))
+		resp, err := http.Post(s.url, "", bytes.NewBuffer(value))
 		defer resp.Body.Close()
 		c.Assert(err, IsNil)
 		if resp.StatusCode != 200 && resp.StatusCode != 201 {
@@ -149,7 +149,7 @@ func (s *TestSuite) TestAlreadyExists(c *C) {
 	// Write
 	_, sendValue, _ := s.write(c)
 	// And again...
-	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
+	resp, err := http.Post(s.url, "", bytes.NewBuffer(sendValue))
 	c.Assert(err, IsNil)
 	c.Assert(resp.StatusCode, Equals, 200)
 
