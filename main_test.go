@@ -12,9 +12,11 @@ import (
 	"io/ioutil"
 	. "launchpad.net/gocheck"
 	"log"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 )
 
@@ -49,20 +51,27 @@ func (s *TestSuite) TearDownTest(c *C) {
 	os.RemoveAll(s.dbDir)
 }
 
-// write POSTs a random byte slice value to the API.
-func (s *TestSuite) write(c *C) (key string, value []byte) {
-	// Write
-	size := int(2 * MiB)
-	value = make([]byte, size)
-	_, err := rand.Read(value)
+// write POSTs random data to the API.
+func (s *TestSuite) write(c *C) (key string, value []byte, statusCode int) {
+	bi, err := rand.Int(rand.Reader, big.NewInt(int64(maxDataSize-1)))
 	c.Assert(err, IsNil)
+	size := int(bi.Int64()) + 1
+	// size := int(mbs * int(MiB))
+	// size := int(2 * MiB)
+	value = make([]byte, size)
+	_, err = rand.Read(value)
+	c.Assert(err, IsNil)
+	// We're not doing anything server-side with the bodyType
 	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(value))
 	defer resp.Body.Close()
 	c.Assert(err, IsNil)
-	c.Assert(resp.StatusCode, Equals, 200)
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		c.Fatal("Expected status 200 or 201, but got", resp.StatusCode)
+	}
 	b, err := ioutil.ReadAll(resp.Body)
 	c.Assert(err, IsNil)
 	key = string(b)
+	statusCode = resp.StatusCode
 	return
 }
 
@@ -70,7 +79,7 @@ func (s *TestSuite) write(c *C) (key string, value []byte) {
 // the same data from its sha1.
 func (s *TestSuite) TestWriteRead(c *C) {
 	// Write
-	key, sendValue := s.write(c)
+	key, sendValue, _ := s.write(c)
 	// Read
 	url := s.url + "/" + string(key)
 	resp, err := http.Get(url)
@@ -81,10 +90,57 @@ func (s *TestSuite) TestWriteRead(c *C) {
 	c.Assert(retValue, DeepEquals, sendValue)
 }
 
+// TestConcurrentWrites tests between 100 and 200 concurrent writes to the API.
+func (s *TestSuite) TestConcurrentWrites(c *C) {
+	b, err := rand.Int(rand.Reader, big.NewInt(int64(100)))
+	c.Assert(err, IsNil)
+	count := 100 + int(b.Int64())
+	wg := sync.WaitGroup{}
+	wg.Add(count)
+	writer := func() {
+		s.write(c)
+		wg.Done()
+	}
+	for i := 0; i < count; i++ {
+		go writer()
+	}
+	wg.Wait()
+}
+
+// TestConcurrentSameData tests between 100 and 200 concurrent writes of
+// identical data to the API.
+func (s *TestSuite) TestConcurrentSameData(c *C) {
+	b, err := rand.Int(rand.Reader, big.NewInt(int64(100)))
+	c.Assert(err, IsNil)
+	count := 100 + int(b.Int64())
+	wg := sync.WaitGroup{}
+	wg.Add(count)
+	bi, err := rand.Int(rand.Reader, big.NewInt(int64(maxDataSize-1)))
+	c.Assert(err, IsNil)
+	size := int(bi.Int64()) + 1
+	value := make([]byte, size)
+	_, err = rand.Read(value)
+	c.Assert(err, IsNil)
+	writer := func() {
+		resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(value))
+		defer resp.Body.Close()
+		c.Assert(err, IsNil)
+		if resp.StatusCode != 200 && resp.StatusCode != 201 {
+			c.Fatal("Expected status 200 or 201, but got", resp.StatusCode)
+		}
+		// Done
+		wg.Done()
+	}
+	for i := 0; i < count; i++ {
+		go writer()
+	}
+	wg.Wait()
+}
+
 // TestAlreadyExists tests writing a block that already exists on disk.
 func (s *TestSuite) TestAlreadyExists(c *C) {
 	// Write
-	_, sendValue := s.write(c)
+	_, sendValue, _ := s.write(c)
 	// And again...
 	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
 	c.Assert(err, IsNil)
@@ -95,7 +151,7 @@ func (s *TestSuite) TestAlreadyExists(c *C) {
 // TestCorrupt tests server response when data is corrupted on disk.
 func (s *TestSuite) TestCorrupt(c *C) {
 	// Write
-	key, _ := s.write(c)
+	key, _, _ := s.write(c)
 	// Cause intentional corruption
 	db.Write(string(key), []byte("foobar"))
 	// Expect 500 error - desirable behavior?

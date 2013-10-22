@@ -93,6 +93,7 @@ func write(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), 500)
 			return
 		}
+		w.WriteHeader(http.StatusCreated)
 	}
 	w.Write([]byte(sum))
 }
