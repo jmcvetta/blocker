@@ -19,45 +19,53 @@ import (
 	"log"
 )
 
-const maxDataSize = int(64 * MB)
+const maxDataSize = int(64*MiB) / 8
 
 // db is the key-value store to which data is persisted.
 var db *diskv.Diskv
 
-// Taken from http://golang.org/doc/effective_go.html#constants
+// Derived from http://golang.org/doc/effective_go.html#constants and
+// https://groups.google.com/forum/#!topic/golang-nuts/AHoxOtHCOyw
 type ByteSize float64
 
 const (
-	_           = iota
-	KB ByteSize = 1 << (10 * iota)
-	MB
-	GB
-	TB
-	PB
-	EB
-	ZB
-	YB
+	_            = iota
+	KiB ByteSize = 1 << (10 * iota)
+	MiB
+	GiB
+	TiB
+	PiB
+	EiB
+	ZiB
+	YiB
 )
 
 const transformBlockSize = 2 // grouping of chars per directory depth
 
-func readHandler(w http.ResponseWriter, r *http.Request) {
-	key := r.URL.Query().Get("key")
+func read(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get(":key")
 	if key == "" {
 		msg := "Must provide a key"
 		http.Error(w, msg, http.StatusBadRequest)
+		return
 	}
-
+	b, err := db.Read(key)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(b)
+	return
 }
 
-func writeHandler(w http.ResponseWriter, r *http.Request) {
+func write(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
 	if len(b) > maxDataSize {
-		msg := "Maximum block size is 64MB"
+		msg := "Maximum block size is 64MiB"
 		http.Error(w, msg, http.StatusRequestEntityTooLarge)
 		return
 	}
@@ -75,8 +83,8 @@ func writeHandler(w http.ResponseWriter, r *http.Request) {
 
 func handler() http.Handler {
 	m := pat.New()
-	m.Get("/blocker/:key", http.HandlerFunc(readHandler))
-	m.Post("/blocker", http.HandlerFunc(writeHandler))
+	m.Get("/blocker/:key", http.HandlerFunc(read))
+	m.Post("/blocker", http.HandlerFunc(write))
 	return m
 }
 
@@ -92,12 +100,12 @@ func setupDb(dbDir string) {
 		return pathSlice
 	}
 
-	// Initialize a new diskv store, rooted at dbDir, with a 1MB cache.
+	// Initialize a new diskv store, rooted at dbDir, with a 1MiB cache.
 	db = diskv.New(diskv.Options{
 		BasePath: dbDir,
 		// Transform:    func(s string) []string { return []string{} },
 		Transform:    blockTransform,
-		CacheSizeMax: uint64(1 * MB),
+		CacheSizeMax: uint64(maxDataSize),
 	})
 	return
 }

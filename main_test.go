@@ -29,8 +29,6 @@ type TestSuite struct {
 	hserv *httptest.Server
 }
 
-// var _ = Suite(&TestSuite{})
-
 func (s *TestSuite) SetUpSuite(c *C) {
 	log.SetFlags(log.Lshortfile)
 }
@@ -51,15 +49,21 @@ func (s *TestSuite) TearDownTest(c *C) {
 }
 
 func (s *TestSuite) TestReadWrite(c *C) {
-	size := int(0.5 * KB)
-	b := make([]byte, size)
-	_, err := rand.Read(b)
+	size := int(2 * MiB)
+	sendValue := make([]byte, size)
+	_, err := rand.Read(sendValue)
 	c.Assert(err, IsNil)
-	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(b))
+	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
 	defer resp.Body.Close()
 	c.Assert(err, IsNil)
 	c.Assert(resp.StatusCode, Equals, 200)
-	body, err := ioutil.ReadAll(resp.Body)
+	key, err := ioutil.ReadAll(resp.Body)
 	c.Assert(err, IsNil)
-	log.Println(body)
+	url := s.url + "/" + string(key)
+	resp, err = http.Get(url)
+	defer resp.Body.Close()
+	c.Assert(resp.StatusCode, Equals, 200)
+	c.Assert(err, IsNil)
+	retValue, err := ioutil.ReadAll(resp.Body)
+	c.Assert(retValue, DeepEquals, sendValue)
 }
