@@ -74,6 +74,24 @@ func (s *TestSuite) TestWriteRead(c *C) {
 	c.Assert(retValue, DeepEquals, sendValue)
 }
 
+// TestAlreadyExists tests writing a block that already exists on disk.
+func (s *TestSuite) TestAlreadyExists(c *C) {
+	// Write
+	size := int(2 * MiB)
+	sendValue := make([]byte, size)
+	_, err := rand.Read(sendValue)
+	c.Assert(err, IsNil)
+	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
+	c.Assert(err, IsNil)
+	c.Assert(resp.StatusCode, Equals, 200)
+
+	// And again...
+	resp, err = http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
+	c.Assert(err, IsNil)
+	c.Assert(resp.StatusCode, Equals, 200)
+
+}
+
 // TestCorrupt tests server response when data is corrupted on disk.
 func (s *TestSuite) TestCorrupt(c *C) {
 	// Write
