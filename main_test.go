@@ -41,7 +41,7 @@ func (s *TestSuite) SetUpTest(c *C) {
 	s.dbDir, err = ioutil.TempDir("", "blocker")
 	c.Assert(err, IsNil)
 	setupDb(s.dbDir)
-	h := handler()
+	h := muxer()
 	s.hserv = httptest.NewServer(h)
 	s.url = s.hserv.URL + "/blocker"
 }
@@ -51,8 +51,8 @@ func (s *TestSuite) TearDownTest(c *C) {
 	os.RemoveAll(s.dbDir)
 }
 
-// write POSTs random data to the API.
-func (s *TestSuite) write(c *C) (key string, value []byte, statusCode int) {
+// post POSTs random data to the API.
+func (s *TestSuite) post(c *C) (key string, value []byte, statusCode int) {
 	bi, err := rand.Int(rand.Reader, big.NewInt(int64(maxDataSize-1)))
 	c.Assert(err, IsNil)
 	size := int(bi.Int64()) + 1
@@ -79,7 +79,7 @@ func (s *TestSuite) write(c *C) (key string, value []byte, statusCode int) {
 // the same data from its sha1.
 func (s *TestSuite) TestWriteRead(c *C) {
 	// Write
-	key, sendValue, _ := s.write(c)
+	key, sendValue, _ := s.post(c)
 	// Read
 	url := s.url + "/" + string(key)
 	resp, err := http.Get(url)
@@ -98,7 +98,7 @@ func (s *TestSuite) TestConcurrentWrites(c *C) {
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 	writer := func() {
-		s.write(c)
+		s.post(c)
 		wg.Done()
 	}
 	for i := 0; i < count; i++ {
@@ -148,7 +148,7 @@ func (s *TestSuite) TestGetNoKey(c *C) {
 // TestAlreadyExists tests writing a block that already exists on disk.
 func (s *TestSuite) TestAlreadyExists(c *C) {
 	// Write
-	_, sendValue, _ := s.write(c)
+	_, sendValue, _ := s.post(c)
 	// And again...
 	resp, err := http.Post(s.url, "", bytes.NewBuffer(sendValue))
 	c.Assert(err, IsNil)
@@ -165,7 +165,7 @@ func (s *TestSuite) TestDiskFull(c *C) {
 // TestCorrupt tests server response when data is corrupted on disk.
 func (s *TestSuite) TestCorrupt(c *C) {
 	// Write
-	key, _, _ := s.write(c)
+	key, _, _ := s.post(c)
 	// Cause intentional corruption
 	db.Write(string(key), []byte("foobar"))
 	// Expect 500 error - desirable behavior?

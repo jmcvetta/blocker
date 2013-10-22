@@ -18,6 +18,8 @@ import (
 	"os"
 )
 
+// maxDataSize is the maximum size of data Blocker will store; attempts to store
+// larger values will return an HTTP 413 error.
 const maxDataSize = int(64*MiB) / 8
 
 // db is the key-value store to which data is persisted.
@@ -39,8 +41,11 @@ const (
 	YiB
 )
 
-const transformBlockSize = 2 // grouping of chars per directory depth
+// transformBlockSize controls the grouping of chars per directory depth
+const transformBlockSize = 2
 
+// read handles HTTP GET requests, returning the block of data matching the SHA1
+// digest key specified in the URL.
 func read(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get(":key")
 	if key == "" {
@@ -68,6 +73,7 @@ func read(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// hash returns the base64-encoded SHA1 digest of b.
 func hash(b []byte) string {
 	h := sha1.New()
 	h.Write(b)
@@ -75,6 +81,8 @@ func hash(b []byte) string {
 	return base64.URLEncoding.EncodeToString(sum)
 }
 
+// write handles HTTP POST requests, writing the body of the request to storage
+// and returning its SHA1 digest.
 func write(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -98,13 +106,16 @@ func write(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(sum))
 }
 
-func handler() http.Handler {
+// muxer configures a muxer to route HTTP requests.
+func muxer() http.Handler {
 	m := pat.New()
 	m.Get("/blocker/:key", http.HandlerFunc(read))
 	m.Post("/blocker", http.HandlerFunc(write))
 	return m
 }
 
+// setupDb configures the key-value store to which POSTed data will be written,
+// rooted in dbDir.
 func setupDb(dbDir string) {
 	// Based on https://github.com/peterbourgon/diskv/blob/master/examples/content-addressable-store/cas.go#L14
 	blockTransform := func(s string) []string {
@@ -136,5 +147,5 @@ func main() {
 	// Start the service
 	setupDb(dbDir)
 	fmt.Printf("Starting server on localhost:%v\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, handler()))
+	log.Fatal(http.ListenAndServe(":"+port, muxer()))
 }
