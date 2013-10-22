@@ -115,7 +115,7 @@ func (s *TestSuite) TestConcurrentSameData(c *C) {
 	count := 100 + int(b.Int64())
 	wg := sync.WaitGroup{}
 	wg.Add(count)
-	bi, err := rand.Int(rand.Reader, big.NewInt(int64(maxDataSize-1)))
+	bi, err := rand.Int(rand.Reader, big.NewInt(int64(int(MiB)-1)))
 	c.Assert(err, IsNil)
 	size := int(bi.Int64()) + 1
 	value := make([]byte, size)
@@ -135,6 +135,14 @@ func (s *TestSuite) TestConcurrentSameData(c *C) {
 		go writer()
 	}
 	wg.Wait()
+}
+
+// TestGetNoKey tests for 400 error when trying to GET without a sha1 key.
+func (s *TestSuite) TestGetNoKey(c *C) {
+	r, err := http.Get(s.url)
+	c.Assert(err, IsNil)
+	// StatusMethodNotAllowed is apparently set by pat
+	c.Assert(r.StatusCode, Equals, http.StatusMethodNotAllowed)
 }
 
 // TestAlreadyExists tests writing a block that already exists on disk.

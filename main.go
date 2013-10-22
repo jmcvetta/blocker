@@ -128,8 +128,6 @@ func setupDb(dbDir string) {
 }
 
 func main() {
-	log.SetFlags(log.Lshortfile)
-
 	// Gather configuration from environment
 	port := env.StringDefault("PORT", "8080")
 	pwd := env.String("PWD")
@@ -138,6 +136,5 @@ func main() {
 	// Start the service
 	setupDb(dbDir)
 	fmt.Printf("Starting server on localhost:%v\n", port)
-	h := handler()
-	log.Fatal(http.ListenAndServe(":"+port, h))
+	log.Fatal(http.ListenAndServe(":"+port, handler()))
 }
