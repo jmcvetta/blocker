@@ -158,7 +158,7 @@ func (s *TestSuite) TestAlreadyExists(c *C) {
 // TestDiskFull tests for proper error handling when the disk to which the
 // server writes data is full.
 func (s *TestSuite) TestDiskFull(c *C) {
-	log.Println("WARNING: TestDiskFull not yet implemented!")
+	c.Log("WARNING: TestDiskFull not yet implemented!")
 }
 
 // TestCorrupt tests server response when data is corrupted on disk.
