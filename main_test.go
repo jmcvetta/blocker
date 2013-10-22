@@ -49,7 +49,10 @@ func (s *TestSuite) TearDownTest(c *C) {
 	os.RemoveAll(s.dbDir)
 }
 
-func (s *TestSuite) TestReadWrite(c *C) {
+// TestWriteRead tests a round-trip of writing data to the API, then retrieving
+// the same data from its sha1.
+func (s *TestSuite) TestWriteRead(c *C) {
+	// Write
 	size := int(2 * MiB)
 	sendValue := make([]byte, size)
 	_, err := rand.Read(sendValue)
@@ -60,6 +63,8 @@ func (s *TestSuite) TestReadWrite(c *C) {
 	c.Assert(resp.StatusCode, Equals, 200)
 	key, err := ioutil.ReadAll(resp.Body)
 	c.Assert(err, IsNil)
+
+	// Read
 	url := s.url + "/" + string(key)
 	resp, err = http.Get(url)
 	defer resp.Body.Close()
@@ -69,6 +74,32 @@ func (s *TestSuite) TestReadWrite(c *C) {
 	c.Assert(retValue, DeepEquals, sendValue)
 }
 
+// TestCorrupt tests server response when data is corrupted on disk.
+func (s *TestSuite) TestCorrupt(c *C) {
+	// Write
+	size := int(2 * MiB)
+	sendValue := make([]byte, size)
+	_, err := rand.Read(sendValue)
+	c.Assert(err, IsNil)
+	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
+	defer resp.Body.Close()
+	c.Assert(err, IsNil)
+	c.Assert(resp.StatusCode, Equals, 200)
+	key, err := ioutil.ReadAll(resp.Body)
+	c.Assert(err, IsNil)
+
+	// Cause intentional corruption
+	db.Write(string(key), []byte("foobar"))
+
+	// Expect 500 error - desirable behavior?
+	url := s.url + "/" + string(key)
+	resp, err = http.Get(url)
+	// defer resp.Body.Close()
+	c.Assert(err, IsNil)
+	c.Assert(resp.StatusCode, Equals, 500)
+}
+
+// TestNonexistent tests for 404 error when requesting a non existent sha1.
 func (s *TestSuite) TestNonexistent(c *C) {
 	b := make([]byte, 8)
 	_, err := rand.Read(b)

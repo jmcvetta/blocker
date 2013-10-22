@@ -57,8 +57,22 @@ func read(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Check against corruption
+	sum := hash(b)
+	if sum != key {
+		msg := "Data corrupted on disk =("
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
 	w.Write(b)
 	return
+}
+
+func hash(b []byte) string {
+	h := sha1.New()
+	h.Write(b)
+	sum := h.Sum(nil)
+	return base64.URLEncoding.EncodeToString(sum)
 }
 
 func write(w http.ResponseWriter, r *http.Request) {
@@ -72,10 +86,7 @@ func write(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusRequestEntityTooLarge)
 		return
 	}
-	h := sha1.New()
-	h.Write(b)
-	bs := h.Sum(nil)
-	sum := base64.URLEncoding.EncodeToString(bs)
+	sum := hash(b)
 	if !db.Has(sum) {
 		err = db.Write(sum, b)
 		if err != nil {
