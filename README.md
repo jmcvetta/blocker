@@ -23,6 +23,16 @@ go get github.com/jmcvetta/blocker
 ```
 
 
+## Testing
+
+Package [`gocheck`](http://launchpad.net/gocheck) is required to run the test suite.
+
+```
+go get launchpad.net/gocheck
+go test -gocheck.v  # Verbose output
+```
+
+
 ## Usage
 
 ```bash
