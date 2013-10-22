@@ -23,16 +23,6 @@ go get github.com/jmcvetta/blocker
 ```
 
 
-## Testing
-
-Package [`gocheck`](http://labix.org/gocheck) is required to run the test suite.
-
-```
-go get launchpad.net/gocheck
-go test -gocheck.v  # Verbose output
-```
-
-
 ## Usage
 
 ```bash
@@ -48,6 +38,16 @@ x1Z-izniQo44v5ySJqxo3kxn3Dk=
 # Retreive data using key
 $ wget -qO - http://localhost:8080/blocker/x1Z-izniQo44v5ySJqxo3kxn3Dk= ; echo
 foo bar baz
+```
+
+
+## Testing
+
+Package [`gocheck`](http://labix.org/gocheck) is required to run the test suite.
+
+```
+go get launchpad.net/gocheck
+go test -gocheck.v  # Verbose output
 ```
 
 
