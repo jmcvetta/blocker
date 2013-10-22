@@ -49,24 +49,31 @@ func (s *TestSuite) TearDownTest(c *C) {
 	os.RemoveAll(s.dbDir)
 }
 
+// write POSTs a random byte slice value to the API.
+func (s *TestSuite) write(c *C) (key string, value []byte) {
+	// Write
+	size := int(2 * MiB)
+	value = make([]byte, size)
+	_, err := rand.Read(value)
+	c.Assert(err, IsNil)
+	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(value))
+	defer resp.Body.Close()
+	c.Assert(err, IsNil)
+	c.Assert(resp.StatusCode, Equals, 200)
+	b, err := ioutil.ReadAll(resp.Body)
+	c.Assert(err, IsNil)
+	key = string(b)
+	return
+}
+
 // TestWriteRead tests a round-trip of writing data to the API, then retrieving
 // the same data from its sha1.
 func (s *TestSuite) TestWriteRead(c *C) {
 	// Write
-	size := int(2 * MiB)
-	sendValue := make([]byte, size)
-	_, err := rand.Read(sendValue)
-	c.Assert(err, IsNil)
-	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
-	defer resp.Body.Close()
-	c.Assert(err, IsNil)
-	c.Assert(resp.StatusCode, Equals, 200)
-	key, err := ioutil.ReadAll(resp.Body)
-	c.Assert(err, IsNil)
-
+	key, sendValue := s.write(c)
 	// Read
 	url := s.url + "/" + string(key)
-	resp, err = http.Get(url)
+	resp, err := http.Get(url)
 	defer resp.Body.Close()
 	c.Assert(resp.StatusCode, Equals, 200)
 	c.Assert(err, IsNil)
@@ -77,16 +84,9 @@ func (s *TestSuite) TestWriteRead(c *C) {
 // TestAlreadyExists tests writing a block that already exists on disk.
 func (s *TestSuite) TestAlreadyExists(c *C) {
 	// Write
-	size := int(2 * MiB)
-	sendValue := make([]byte, size)
-	_, err := rand.Read(sendValue)
-	c.Assert(err, IsNil)
-	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
-	c.Assert(err, IsNil)
-	c.Assert(resp.StatusCode, Equals, 200)
-
+	_, sendValue := s.write(c)
 	// And again...
-	resp, err = http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
+	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
 	c.Assert(err, IsNil)
 	c.Assert(resp.StatusCode, Equals, 200)
 
@@ -95,23 +95,12 @@ func (s *TestSuite) TestAlreadyExists(c *C) {
 // TestCorrupt tests server response when data is corrupted on disk.
 func (s *TestSuite) TestCorrupt(c *C) {
 	// Write
-	size := int(2 * MiB)
-	sendValue := make([]byte, size)
-	_, err := rand.Read(sendValue)
-	c.Assert(err, IsNil)
-	resp, err := http.Post(s.url, "foobar", bytes.NewBuffer(sendValue))
-	defer resp.Body.Close()
-	c.Assert(err, IsNil)
-	c.Assert(resp.StatusCode, Equals, 200)
-	key, err := ioutil.ReadAll(resp.Body)
-	c.Assert(err, IsNil)
-
+	key, _ := s.write(c)
 	// Cause intentional corruption
 	db.Write(string(key), []byte("foobar"))
-
 	// Expect 500 error - desirable behavior?
 	url := s.url + "/" + string(key)
-	resp, err = http.Get(url)
+	resp, err := http.Get(url)
 	// defer resp.Body.Close()
 	c.Assert(err, IsNil)
 	c.Assert(resp.StatusCode, Equals, 500)
