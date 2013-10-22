@@ -2,6 +2,7 @@ language: go
 go: 
   - 1.1
   - tip
+script: go test -gocheck.v .
 notificaitons:
   email:
     recipients:
