@@ -13,6 +13,11 @@ EXPERIMENTAL - Not recommended for general use.
 [![Coverage Status](https://coveralls.io/repos/jmcvetta/blocker/badge.png?branch=master)](https://coveralls.io/r/jmcvetta/blocker?branch=master)
 
 
+## Documentation
+
+* Automatically generated [API Documentation](http://gowalker.org/github.com/jmcvetta/blocker)
+
+
 ## License
 
 This is Free Software, released under the terms of the [AGPL
