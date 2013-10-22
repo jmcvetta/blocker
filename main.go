@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 )
 
 const maxDataSize = int(64*MiB) / 8
@@ -48,6 +49,10 @@ func read(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b, err := db.Read(key)
+	if os.IsNotExist(err) {
+		http.Error(w, "Key not found", http.StatusNotFound)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
