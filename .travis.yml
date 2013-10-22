@@ -1,0 +1,12 @@
+language: go
+go: 
+  - 1.1
+  - tip
+notificaitons:
+  email:
+    recipients:
+      jason.mcvetta@gmail.com
+    on_success: change
+    on_failure: always
+before_script:
+  - go get -v launchpad.net/gocheck
