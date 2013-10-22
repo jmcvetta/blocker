@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"io/ioutil"
 	. "launchpad.net/gocheck"
 	"log"
@@ -66,4 +67,15 @@ func (s *TestSuite) TestReadWrite(c *C) {
 	c.Assert(err, IsNil)
 	retValue, err := ioutil.ReadAll(resp.Body)
 	c.Assert(retValue, DeepEquals, sendValue)
+}
+
+func (s *TestSuite) TestNonexistent(c *C) {
+	b := make([]byte, 8)
+	_, err := rand.Read(b)
+	c.Assert(err, IsNil)
+	key := base64.URLEncoding.EncodeToString(b)
+	url := s.url + "/" + string(key)
+	r, err := http.Get(url)
+	c.Assert(err, IsNil)
+	c.Assert(r.StatusCode, Equals, http.StatusNotFound)
 }
