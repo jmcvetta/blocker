@@ -1,8 +1,8 @@
 blocker
 =======
 
-Blocker is an HTTP (but not particularly RESTful) API to write arbitrary blocks
-of data to storage, and to retrieve them by SHA1 hash key.
+Blocker is an HTTP (but not RESTful) API to write arbitrary blocks of data to
+storage, and to retrieve them by SHA1 hash key.
 
 
 ## Status
