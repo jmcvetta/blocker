@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 )
@@ -92,9 +93,7 @@ func (s *TestSuite) TestWriteRead(c *C) {
 
 // TestConcurrentWrites tests between 100 and 200 concurrent writes to the API.
 func (s *TestSuite) TestConcurrentWrites(c *C) {
-	b, err := rand.Int(rand.Reader, big.NewInt(int64(100)))
-	c.Assert(err, IsNil)
-	count := 100 + int(b.Int64())
+	count := runtime.NumCPU() * 25
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 	writer := func() {
@@ -154,6 +153,12 @@ func (s *TestSuite) TestAlreadyExists(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(resp.StatusCode, Equals, 200)
 
+}
+
+// TestDiskFull tests for proper error handling when the disk to which the
+// server writes data is full.
+func (s *TestSuite) TestDiskFull(c *C) {
+	log.Println("WARNING: TestDiskFull not yet implemented!")
 }
 
 // TestCorrupt tests server response when data is corrupted on disk.
