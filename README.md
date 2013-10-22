@@ -41,6 +41,13 @@ foo bar baz
 ```
 
 
+## Name
+
+The name "Blocker" is a silly pun on the popular application
+"[Docker](https://github.com/dotcloud/docker)" - to which Blocker has no
+particular relationship or similarity - and "blocks of data".
+
+
 ## License
 
 This is Free Software, released under the terms of the [AGPL
