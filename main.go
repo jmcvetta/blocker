@@ -6,17 +6,15 @@
 package main
 
 import (
-	"github.com/bmizerany/pat"
-	"github.com/darkhelmet/env"
-	"net/http"
-	// "github.com/steveyen/gkvlite"
-	"github.com/peterbourgon/diskv"
-
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"github.com/bmizerany/pat"
+	"github.com/darkhelmet/env"
+	"github.com/peterbourgon/diskv"
 	"io/ioutil"
 	"log"
+	"net/http"
 )
 
 const maxDataSize = int(64*MiB) / 8
@@ -73,10 +71,12 @@ func write(w http.ResponseWriter, r *http.Request) {
 	h.Write(b)
 	bs := h.Sum(nil)
 	sum := base64.URLEncoding.EncodeToString(bs)
-	err = db.Write(sum, b)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+	if !db.Has(sum) {
+		err = db.Write(sum, b)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
 	}
 	w.Write([]byte(sum))
 }
