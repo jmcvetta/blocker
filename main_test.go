@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"runtime"
 	"sync"
 	"testing"
 )
@@ -93,7 +92,9 @@ func (s *TestSuite) TestWriteRead(c *C) {
 
 // TestConcurrentWrites tests between 100 and 200 concurrent writes to the API.
 func (s *TestSuite) TestConcurrentWrites(c *C) {
-	count := runtime.NumCPU() * 25
+	b, err := rand.Int(rand.Reader, big.NewInt(int64(99)))
+	c.Assert(err, IsNil)
+	count := 1 + int(b.Int64())
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 	writer := func() {
