@@ -117,7 +117,7 @@ func setupDb(dbDir string) {
 		return pathSlice
 	}
 
-	// Initialize a new diskv store, rooted at dbDir, with a 1MiB cache.
+	// Initialize a new diskv store
 	db = diskv.New(diskv.Options{
 		BasePath: dbDir,
 		// Transform:    func(s string) []string { return []string{} },
